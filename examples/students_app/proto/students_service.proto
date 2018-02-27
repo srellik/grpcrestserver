@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package students_service;
+
+import "google/api/annotations.proto";
+
+message Student {
+  enum Gender {
+    PREFER_NOT_TO_SAY = 0;
+    MALE = 1;
+    FEMALE = 2;
+    OTHER = 3;
+  }
+  uint64 id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  int32 age = 4;
+  string mother_name = 5;
+  string father_name = 6;
+  Gender gender = 7;
+}
+
+message Students {
+  repeated Student students = 1;
+}
+
+message Empty {
+}
+
+service StudentsService {
+  rpc CreateStudent(Student) returns (Student) {
+    option (google.api.http) = {
+      post: "/v1/students"
+      body: "*"
+    };
+  }
+
+  rpc GetStudents(Empty) returns (Students) {
+    option (google.api.http).get = "/v1/students";
+  }
+}
