@@ -20,22 +20,60 @@ message Student {
   Gender gender = 7;
 }
 
-message Students {
-  repeated Student students = 1;
+message Students { repeated Student students = 1; }
+
+message Empty {}
+
+message GetStudentMessage {
+  uint64 student_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  int32 min_age = 4;
+  int32 max_age = 5;
+  string mother_name = 6;
+  string father_name = 7;
+  Student.Gender gender = 8;
 }
 
-message Empty {
-}
+message UpdateStudentMessage { uint64 student_id = 1; }
 
 service StudentsService {
   rpc CreateStudent(Student) returns (Student) {
     option (google.api.http) = {
-      post: "/v1/students"
-      body: "*"
+      post : "/v1/students"
+      body : "*"
     };
   }
 
-  rpc GetStudents(Empty) returns (Students) {
-    option (google.api.http).get = "/v1/students";
+  rpc GetStudents(GetStudentMessage) returns (Students) {
+    option (google.api.http) = {
+      get : "/v1/students"
+    };
+  }
+
+  rpc GetStudent(GetStudentMessage) returns (Student) {
+    option (google.api.http) = {
+      get : "/v1/students/{student_id}"
+    };
+  }
+
+  rpc UpdateStudent(Student) returns (Student) {
+    option (google.api.http) = {
+      patch : "/v1/students/{id}"
+      body : "*"
+    };
+  }
+
+  rpc ReplaceStudent(Student) returns (Student) {
+    option (google.api.http) = {
+      put : "/v1/students/{id}"
+      body : "*"
+    };
+  }
+
+  rpc DeleteStudent(Student) returns (Empty) {
+    option (google.api.http) = {
+      delete : "/v1/students/{id}"
+    };
   }
 }
