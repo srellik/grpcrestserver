@@ -39,6 +39,7 @@ type TLSOptions struct {
 	KeyFilePath string
 }
 
+// AuthHelperFuncs will be used by login service to verify credentials, generate a token, and parse the token.
 type AuthHelperFuncs struct {
 	VerifyCredentialsFunc loginservice.VerifyCredentialsFunc
 	GenerateTokenFunc     loginservice.GenerateTokenFunc
@@ -58,7 +59,8 @@ type Options struct {
 	// TLSOptions
 	TLSOptions TLSOptions
 	// AuthHelperFuncs which are used for login, authenticating each request.
-	// These handlers are used at GRPC level.
+	// These handlers are used at GRPC level. If you are fine using the default handlers for these keep it uninitialized.
+	// Refer: loginservice.DefaultVerifyCredentialsFunc, loginservice.DefaultGenerateTokenFunc, loginservice.DefaultParseTokenFunc.
 	AuthHelperFuncs AuthHelperFuncs
 	// Swagger json file paths
 	SwaggerJsonFilePaths []string
