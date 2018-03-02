@@ -30,10 +30,8 @@ func main() {
 				return sspb.RegisterStudentsServiceHandlerFromEndpoint(ctx, gw, grpcServerAddr, dialOpts)
 			},
 		},
-		// TLSOptions: grpcrestserver.TLSOptions{
-		// 	CertFilePath: "server/certs/server.crt",
-		// 	KeyFilePath:  "server/certs/server.key",
-		// },
 	}
 	grpcrestserver.RunWith(opts)
 }
+
+func isTokenValidFunc()

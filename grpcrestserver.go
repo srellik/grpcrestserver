@@ -14,8 +14,13 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
+
+	"grpcrestserver/login_service/loginservice"
+	lpb "grpcrestserver/login_service/proto/login_service"
 )
 
 // GRPCHandlerCallback is a callback which will be called while it is creating GRPC server,
@@ -34,6 +39,13 @@ type TLSOptions struct {
 	KeyFilePath string
 }
 
+// AuthHelperFuncs will be used by login service to verify credentials, generate a token, and parse the token.
+type AuthHelperFuncs struct {
+	VerifyCredentialsFunc loginservice.VerifyCredentialsFunc
+	GenerateTokenFunc     loginservice.GenerateTokenFunc
+	ParseTokenFunc        loginservice.ParseTokenFunc
+}
+
 // Options to start the both grpc server and grpc-gateway server.
 type Options struct {
 	// GRPC server address eg. localhost:8889
@@ -46,6 +58,10 @@ type Options struct {
 	RESTEndpointHandlers []RESTHandlerCallback
 	// TLSOptions
 	TLSOptions TLSOptions
+	// AuthHelperFuncs which are used for login, authenticating each request.
+	// These handlers are used at GRPC level. If you are fine using the default handlers for these keep it uninitialized.
+	// Refer: loginservice.DefaultVerifyCredentialsFunc, loginservice.DefaultGenerateTokenFunc, loginservice.DefaultParseTokenFunc.
+	AuthHelperFuncs AuthHelperFuncs
 	// Swagger json file paths
 	SwaggerJsonFilePaths []string
 }
@@ -83,16 +99,24 @@ func startGRPCServer(o Options, crtFile, keyFile string) error {
 		return err
 	}
 
-	var s *grpc.Server
+	sOpts := []grpc.ServerOption{}
+
 	if crtFile != "" && keyFile != "" {
 		creds, err := credentials.NewServerTLSFromFile(crtFile, keyFile)
 		if err != nil {
 			return err
 		}
-		s = grpc.NewServer(grpc.Creds(creds))
-	} else {
-		s = grpc.NewServer()
+		sOpts = append(sOpts, grpc.Creds(creds))
 	}
+
+	sOpts = append(sOpts, grpc.UnaryInterceptor(authInterceptor(o.GRPCServerAddr, crtFile)))
+	s := grpc.NewServer(sOpts...)
+
+	vf := o.AuthHelperFuncs.VerifyCredentialsFunc
+	gf := o.AuthHelperFuncs.GenerateTokenFunc
+	tf := o.AuthHelperFuncs.ParseTokenFunc
+
+	lpb.RegisterLoginServiceServer(s, loginservice.New(vf, gf, tf))
 
 	for _, handler := range o.GRPCServiceHandlers {
 		handler(s)
@@ -126,6 +150,9 @@ func startRESTServer(o Options, crtFile string) error {
 
 	gw := runtime.NewServeMux()
 
+	if err := lpb.RegisterLoginServiceHandlerFromEndpoint(ctx, gw, o.GRPCServerAddr, dialOpts); err != nil {
+		return err
+	}
 	for _, handler := range o.RESTEndpointHandlers {
 		if err := handler(ctx, gw, o.GRPCServerAddr, dialOpts); err != nil {
 			return err
@@ -164,4 +191,75 @@ func swaggerServeHandler(swaggerJsonFilePaths []string) func(http.ResponseWriter
 		}
 		http.ServeFile(w, r, swaggerToServe)
 	}
+}
+
+var authPrefix = []string{"basic", "bearer"}
+var skipAuth = map[string]bool{
+	"/login_service.LoginService/Login":        true,
+	"/login_service.LoginService/Authenticate": true,
+}
+
+func authInterceptor(grpcServerAddr, crtFile string) func(context.Context, interface{}, *grpc.UnaryServerInfo, grpc.UnaryHandler) (interface{}, error) {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		// Skipping these RPC methods from auth interceptor.
+		if _, ok := skipAuth[info.FullMethod]; ok {
+			return handler(ctx, req)
+		}
+		md, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			return nil, grpc.Errorf(codes.Internal, "failed to parse metadata")
+		}
+
+		headers := md["authorization"]
+		if len(headers) == 0 {
+			return nil, grpc.Errorf(codes.Unauthenticated, "invalid authorization headers")
+		}
+
+		bt := func() string {
+			for _, h := range headers {
+				for _, prefix := range authPrefix {
+					if strings.HasPrefix(strings.ToLower(h), strings.ToLower(prefix)) {
+						return h
+					}
+				}
+			}
+			return ""
+		}()
+
+		splits := strings.SplitN(bt, " ", 2)
+		if len(splits) != 2 {
+			return nil, grpc.Errorf(codes.Unauthenticated, "invalid authorization headers")
+		}
+		creds, err := authenticateReq(ctx, grpcServerAddr, crtFile, splits[1])
+		if err != nil {
+			return nil, err
+		}
+		// Add the credentials to the context so that the RPC method can be able to use it for processing.
+		ctx = context.WithValue(ctx, "creds", loginservice.Credentials{
+			UserId:   creds.UserId,
+			Password: creds.Password,
+			Metadata: creds.Metadata,
+		})
+		return handler(ctx, req)
+	}
+}
+
+func authenticateReq(ctx context.Context, grpcServerAddr, crtFile, token string) (*lpb.Credentials, error) {
+	dialOpts := []grpc.DialOption{}
+	if crtFile != "" {
+		creds, err := credentials.NewClientTLSFromFile(crtFile, "")
+		if err != nil {
+			return nil, err
+		}
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
+	} else {
+		dialOpts = append(dialOpts, grpc.WithInsecure())
+	}
+	conn, err := grpc.Dial(grpcServerAddr, dialOpts...)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	c := lpb.NewLoginServiceClient(conn)
+	return c.Authenticate(ctx, &lpb.AuthenticateReq{Token: token})
 }

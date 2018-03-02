@@ -2,10 +2,10 @@ package(default_visibility = ["//visibility:public"])
 
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
-
 go_binary(
     name = "server",
     srcs = ["main.go"],
+    pure = "on",
     deps = [
         "//:go_default_library",
         "//examples/students_app/proto:students_service_go_proto",
@@ -26,11 +26,5 @@ load(
 
 go_image(
     name = "server_go_image",
-    srcs = ["main.go"],
-    base = GO_DEFAULT_BASE,
-    #goos = "linux",
-    importpath = "grpc-rest-server-bazel-seed/server",
-    pure = "on",
-    visibility = ["//visibility:public"],
-    deps = [":serverlib"],
+    binary = ":server"
 )
