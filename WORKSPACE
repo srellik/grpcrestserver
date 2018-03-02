@@ -7,7 +7,7 @@ git_repository(
     remote = "https://github.com/chaitanya9186/rules_go.git",
 )
 
-load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains")
+load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains",  "go_repository")
 
 go_rules_dependencies()
 
@@ -90,3 +90,16 @@ load(
 )
 
 _go_image_repos()
+
+go_repository(
+    name = "com_github_dgrijalva_jwt_go",
+    importpath = "github.com/dgrijalva/jwt-go",
+    # remote = "https://github.com/dgrijalva/jwt-go",
+    tag = "v3.1.0",
+)
+
+go_repository(
+    name = "com_github_grpc_ecosystem_go_grpc_middleware",
+    importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
+    commit = "eb23b08d08bbe930113a6512a7a829050341448c",
+)

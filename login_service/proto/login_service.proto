@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package login_service;
+
+import "google/api/annotations.proto";
+
+message Credentials {
+  string user_id = 1;
+  string password = 2;
+
+  bytes metadata = 3;
+}
+
+message TokenResponse { string token = 1; }
+
+message Empty {}
+
+message AuthenticateReq { string token = 1; }
+
+service LoginService {
+  rpc Login(Credentials) returns (TokenResponse) {
+    option (google.api.http) = {
+      post : "/login"
+      body : "*"
+    };
+  }
+
+  rpc Authenticate(AuthenticateReq) returns (Credentials) {}
+}

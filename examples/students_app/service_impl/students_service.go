@@ -31,6 +31,7 @@ func (s *StudentsRPCServiceImpl) CreateStudent(ctx context.Context, in *sspb.Stu
 }
 
 func (s *StudentsRPCServiceImpl) GetStudents(ctx context.Context, in *sspb.GetStudentMessage) (*sspb.Students, error) {
+	log.Printf("User creds : %v", ctx.Value("creds"))
 	log.Printf("Getting all the students with %v", in)
 	students := []*sspb.Student{}
 	for _, v := range s.l {
