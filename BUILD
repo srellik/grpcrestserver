@@ -9,6 +9,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["grpcrestserver.go"],
+    importpath = "github.com/srellik/grpcrestserver",
     deps = [
         "//login_service:loginservice",
         "//login_service/proto:login_service_go_proto",
