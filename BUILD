@@ -11,7 +11,7 @@ go_library(
     srcs = ["grpcrestserver.go"],
     importpath = "github.com/srellik/grpcrestserver",
     deps = [
-        "//login_service:loginservice",
+        "//login_service:go_default_library",
         "//login_service/proto:login_service_go_proto",
         "@com_github_grpc_ecosystem_grpc_gateway//runtime:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
