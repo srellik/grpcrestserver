@@ -3,8 +3,9 @@ package(default_visibility = ["//visibility:public"])
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
-    name = "loginservice",
+    name = "go_default_library",
     srcs = ["login_service.go"],
+    importpath = "github.com/srellik/grpcrestserver/login_service/loginservice",
     deps = [
         "//login_service/proto:login_service_go_proto",
         "@com_github_golang_protobuf//proto:go_default_library",

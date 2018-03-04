@@ -19,8 +19,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 
-	"grpcrestserver/login_service/loginservice"
 	lpb "grpcrestserver/login_service/proto/login_service"
+
+	"github.com/srellik/grpcrestserver/login_service/loginservice"
 )
 
 // GRPCHandlerCallback is a callback which will be called while it is creating GRPC server,
