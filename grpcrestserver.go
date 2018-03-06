@@ -225,7 +225,7 @@ func authInterceptor(grpcServerAddr, crtFile string) func(context.Context, inter
 		}()
 
 		splits := strings.SplitN(bt, " ", 2)
-		if len(splits) != 2 {
+		if len(splits) == 2 {
 			token = splits[1]
 		}
 		creds, err := authenticateReq(ctx, grpcServerAddr, crtFile, token, info.FullMethod)
