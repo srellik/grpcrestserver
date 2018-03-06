@@ -227,11 +227,12 @@ func authInterceptor(grpcServerAddr, crtFile string) func(context.Context, inter
 			return ""
 		}()
 
+		token := ""
 		splits := strings.SplitN(bt, " ", 2)
 		if len(splits) != 2 {
-			return nil, grpc.Errorf(codes.Unauthenticated, "invalid authorization headers")
+			token = splits[1]
 		}
-		creds, err := authenticateReq(ctx, grpcServerAddr, crtFile, splits[1])
+		creds, err := authenticateReq(ctx, grpcServerAddr, crtFile, token, info.FullMethod)
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +246,7 @@ func authInterceptor(grpcServerAddr, crtFile string) func(context.Context, inter
 	}
 }
 
-func authenticateReq(ctx context.Context, grpcServerAddr, crtFile, token string) (*lpb.Credentials, error) {
+func authenticateReq(ctx context.Context, grpcServerAddr, crtFile, token, fullMethod string) (*lpb.Credentials, error) {
 	dialOpts := []grpc.DialOption{}
 	if crtFile != "" {
 		creds, err := credentials.NewClientTLSFromFile(crtFile, "")
@@ -262,5 +263,5 @@ func authenticateReq(ctx context.Context, grpcServerAddr, crtFile, token string)
 	}
 	defer conn.Close()
 	c := lpb.NewLoginServiceClient(conn)
-	return c.Authenticate(ctx, &lpb.AuthenticateReq{Token: token})
+	return c.Authenticate(ctx, &lpb.AuthenticateReq{Token: token, FullMethod: fullMethod})
 }

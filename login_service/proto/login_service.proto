@@ -15,7 +15,10 @@ message TokenResponse { string token = 1; }
 
 message Empty {}
 
-message AuthenticateReq { string token = 1; }
+message AuthenticateReq {
+  string token = 1;
+  string full_method = 2;
+}
 
 service LoginService {
   rpc Login(Credentials) returns (TokenResponse) {

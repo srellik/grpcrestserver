@@ -41,7 +41,7 @@ type VerifyCredentialsFunc func(Credentials) (bool, []byte, error)
 type GenerateTokenFunc func(Credentials, []byte) (BearerToken, error)
 
 // ParseTokenFunc is a handler to parse the user provided BearerToken and return the Credentials.
-type ParseTokenFunc func(BearerToken) (Credentials, error)
+type ParseTokenFunc func(BearerToken, string) (Credentials, error)
 
 // ServiceImpl is an implementation of pb.LoginService
 type ServiceImpl struct {
@@ -92,7 +92,7 @@ func (s *ServiceImpl) Login(ctx context.Context, in *pb.Credentials) (*pb.TokenR
 
 // Authenticate calls the ParseTokenFunc with token, if anything wrong return codes.Unauthenticated error.
 func (s *ServiceImpl) Authenticate(ctx context.Context, in *pb.AuthenticateReq) (*pb.Credentials, error) {
-	creds, err := s.ParseTokenFunc(BearerToken(in.Token))
+	creds, err := s.ParseTokenFunc(BearerToken(in.Token), in.FullMethod)
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, fmt.Sprintf("invalid token %v", in.Token))
 	}
@@ -130,7 +130,7 @@ func DefaultGenerateTokenFunc(c Credentials, _ []byte) (BearerToken, error) {
 
 // DefaultParseTokenFunc parses the jwt using HMACSecret and returns the stored Credentials in the jwt claims.
 // It must be used only with DefaultGenerateTokenFunc.
-func DefaultParseTokenFunc(bt BearerToken) (Credentials, error) {
+func DefaultParseTokenFunc(bt BearerToken, _ string) (Credentials, error) {
 	creds := Credentials{}
 	t, err := jwt.Parse(string(bt), func(jt *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
