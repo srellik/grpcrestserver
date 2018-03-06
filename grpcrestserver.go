@@ -211,11 +211,8 @@ func authInterceptor(grpcServerAddr, crtFile string) func(context.Context, inter
 			return nil, grpc.Errorf(codes.Internal, "failed to parse metadata")
 		}
 
+		token := ""
 		headers := md["authorization"]
-		if len(headers) == 0 {
-			return nil, grpc.Errorf(codes.Unauthenticated, "invalid authorization headers")
-		}
-
 		bt := func() string {
 			for _, h := range headers {
 				for _, prefix := range authPrefix {
@@ -227,7 +224,6 @@ func authInterceptor(grpcServerAddr, crtFile string) func(context.Context, inter
 			return ""
 		}()
 
-		token := ""
 		splits := strings.SplitN(bt, " ", 2)
 		if len(splits) != 2 {
 			token = splits[1]
