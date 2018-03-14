@@ -162,7 +162,7 @@ func startRESTServer(o Options, crtFile string) error {
 
 	mux.Handle("/", gw)
 	log.Printf("starting REST server: %s", o.RESTServerAddr)
-	return http.ListenAndServe(o.RESTServerAddr, mux)
+	return http.ListenAndServe(o.RESTServerAddr, allowCORS(mux))
 }
 
 func exists(path string) bool {
@@ -260,4 +260,29 @@ func authenticateReq(ctx context.Context, grpcServerAddr, crtFile, token, fullMe
 	defer conn.Close()
 	c := lpb.NewLoginServiceClient(conn)
 	return c.Authenticate(ctx, &lpb.AuthenticateReq{Token: token, FullMethod: fullMethod})
+}
+
+// Copied from https://github.com/grpc-ecosystem/grpc-gateway/blob/bf8e298852d5c258796b43fd5b0db27c53b8787d/examples/main.go
+// allowCORS allows Cross Origin Resoruce Sharing from any origin.
+// Don't do this without consideration in production systems.
+func allowCORS(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if origin := r.Header.Get("Origin"); origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			if r.Method == "OPTIONS" && r.Header.Get("Access-Control-Request-Method") != "" {
+				preflightHandler(w, r)
+				return
+			}
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
+func preflightHandler(w http.ResponseWriter, r *http.Request) {
+	headers := []string{"Content-Type", "Accept"}
+	w.Header().Set("Access-Control-Allow-Headers", strings.Join(headers, ","))
+	methods := []string{"GET", "HEAD", "POST", "PUT", "DELETE"}
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ","))
+	log.Printf("preflight request for %s", r.URL.Path)
+	return
 }
